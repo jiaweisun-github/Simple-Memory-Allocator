@@ -437,12 +437,10 @@ void add_block_freeList(void *block)
 	convertedBlock->next = NULL;
 	convertedBlock->prev = NULL;
 	if(!freeListHead){
-			printf("here1");
 		freeListHead = convertedBlock;
 		freeListTail = convertedBlock;
 		return;
 	}
-
 	struct Node* temp = freeListHead;
 
 	while(temp->next != NULL)
@@ -453,7 +451,6 @@ void add_block_freeList(void *block)
 	convertedBlock->prev = temp;
 	freeListTail = convertedBlock;
 	
-
 	//	Updates SMA info
 	totalAllocatedSize -= get_blockSize(block);
 	totalFreeSize += get_blockSize(block);
