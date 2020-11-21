@@ -39,11 +39,8 @@ int main(int argc, char *argv[])
 	// Allocating 32 kbytes of memory..
 	for (i = 0; i < 32; i++)
 	{
-		// puts("here");
 		c[i] = (char *)sma_malloc(1024);
 		// sprintf(str, "c[i]: %p", c[i]);
-		// printf("%p\n", c[i]);
-
 		// puts(str);
 
 	}
@@ -58,137 +55,141 @@ int main(int argc, char *argv[])
 
 	// Allocate some storage .. this should go into the freed storage
 	ct = (char *)sma_malloc(5 * 1024);
+	printf("realloc\n");
+
+
+
 	// sprintf(str, "CT : %p", ct);
 	// puts(str);
 
-	// printf("%p", c[31]);
 	// Testing if you are finding the available holes
 	if (ct < c[31])
 		puts("\t\t\t\t PASSED\n");
 	else
 		puts("\t\t\t\t FAILED\n");
 
-	// // Test 2: Program Break expansion Test
-	// puts("Test 2: Program break expansion test...");
 
-	// count = 0;
-	// for (i = 1; i < 40; i++)
-	// {
-	// 	limitbefore = sbrk(0);
-	// 	ptr = sma_malloc(1024 * 32 * i);
-	// 	limitafter = sbrk(0);
+	// Test 2: Program Break expansion Test
+	puts("Test 2: Program break expansion test...");
 
-	// 	if (limitafter > limitbefore)
-	// 		count++;
-	// }
+	count = 0;
+	for (i = 1; i < 40; i++)
+	{
+		limitbefore = sbrk(0);
+		ptr = sma_malloc(1024 * 32 * i);
+		limitafter = sbrk(0);
 
-	// // Testing if the program breaks are incremented correctly
-	// if (count > 0 && count < 40)
-	// 	puts("\t\t\t\t PASSED\n");
-	// else
-	// 	puts("\t\t\t\t FAILED\n");
+		if (limitafter > limitbefore)
+			count++;
+	}
 
-	// // Test 3: Worst Fit Test
-	// puts("Test 3: Check for Worst Fit algorithm...");
-	// // Sets Policy to Worst Fit
-	// sma_mallopt(WORST_FIT);
+	// Testing if the program breaks are incremented correctly
+	if (count > 0 && count < 40)
+		puts("\t\t\t\t PASSED\n");
+	else
+		puts("\t\t\t\t FAILED\n");
 
-	// // Allocating 512 kbytes of memory..
-	// for (i = 0; i < 32; i++)
-	// 	c[i] = (char *)sma_malloc(16 * 1024);
+	// Test 3: Worst Fit Test
+	puts("Test 3: Check for Worst Fit algorithm...");
+	// Sets Policy to Worst Fit
+	sma_mallopt(WORST_FIT);
 
-	// // Now deallocating some of the slots ..to free
-	// // One chunk of 5x16 kbytes
-	// sma_free(c[31]);
-	// sma_free(c[30]);
-	// sma_free(c[29]);
-	// sma_free(c[28]);
-	// sma_free(c[27]);
+	// Allocating 512 kbytes of memory..
+	for (i = 0; i < 32; i++)
+		c[i] = (char *)sma_malloc(16 * 1024);
 
-	// // One chunk of 3x16 kbytes
-	// sma_free(c[25]);
-	// sma_free(c[24]);
-	// sma_free(c[23]);
+	// Now deallocating some of the slots ..to free
+	// One chunk of 5x16 kbytes
+	sma_free(c[31]);
+	sma_free(c[30]);
+	sma_free(c[29]);
+	sma_free(c[28]);
+	sma_free(c[27]);
 
-	// // One chunk of 2x16 kbytes
-	// sma_free(c[20]);
-	// sma_free(c[19]);
+	// One chunk of 3x16 kbytes
+	sma_free(c[25]);
+	sma_free(c[24]);
+	sma_free(c[23]);
 
-	// // One chunk of 3x16 kbytes
-	// sma_free(c[10]);
-	// sma_free(c[9]);
-	// sma_free(c[8]);
+	// One chunk of 2x16 kbytes
+	sma_free(c[20]);
+	sma_free(c[19]);
 
-	// // One chunk of 2x16 kbytes
-	// sma_free(c[5]);
-	// sma_free(c[4]);
+	// One chunk of 3x16 kbytes
+	sma_free(c[10]);
+	sma_free(c[9]);
+	sma_free(c[8]);
 
-	// char *cp2 = (char *)sma_malloc(16 * 1024 * 2);
+	// One chunk of 2x16 kbytes
+	sma_free(c[5]);
+	sma_free(c[4]);
 
-	// // Testing if the correct hole has been allocated
-	// if (cp2 != NULL)
-	// {
-	// 	if (cp2 == c[27] || cp2 == c[28] || cp2 == c[29] || cp2 == c[30])
-	// 		puts("\t\t\t\t PASSED\n");
-	// 	else
-	// 		puts("\t\t\t\t FAILED\n");
-	// }
-	// else
-	// {
-	// 	puts("\t\t\t\t FAILED\n");
-	// }
+	char *cp2 = (char *)sma_malloc(16 * 1024 * 2);
 
-	// //	Freeing cp2
-	// sma_free(cp2);
+	// Testing if the correct hole has been allocated
+	if (cp2 != NULL)
+	{
+		if (cp2 == c[27] || cp2 == c[28] || cp2 == c[29] || cp2 == c[30])
+			puts("\t\t\t\t PASSED\n");
+		else
+			puts("\t\t\t\t FAILED\n");
+	}
+	else
+	{
+		puts("\t\t\t\t FAILED\n");
+	}
 
-	// // Test 4: Next Fit Test
-	// puts("Test 4: Check for Next Fit algorithm...");
-	// // Sets Policy to Next Fit
-	// sma_mallopt(NEXT_FIT);
+	//	Freeing cp2
+	sma_free(cp2);
 
-	// char *cp3 = (char *)sma_malloc(16 * 1024 * 3);
-	// char *cp4 = (char *)sma_malloc(16 * 1024 * 2);
+	// Test 4: Next Fit Test
+	puts("Test 4: Check for Next Fit algorithm...");
+	// Sets Policy to Next Fit
+	sma_mallopt(NEXT_FIT);
 
-	// // Testing if the correct holes have been allocated
-	// if (cp3 == c[8] && cp3 != NULL)
-	// {
-	// 	if (cp4 == c[19])
-	// 	{
-	// 		// sprintf(str, "C[19]: %p", c[19]);
-	// 		// puts(str);
-	// 		// sprintf(str, "CP4: %p", cp4);
-	// 		// puts(str);
+	char *cp3 = (char *)sma_malloc(16 * 1024 * 3);
+	char *cp4 = (char *)sma_malloc(16 * 1024 * 2);
 
-	// 		puts("\t\t\t\t PASSED\n");
-	// 	}
-	// 	else
-	// 	{
-	// 		puts("\t\t\t\t FAILED\n");
-	// 	}
-	// }
-	// else
-	// {
-	// 	puts("\t\t\t\t FAILED\n");
-	// }
+	// Testing if the correct holes have been allocated
+	if (cp3 == c[8] && cp3 != NULL)
+	{
+		if (cp4 == c[19])
+		{
+			// sprintf(str, "C[19]: %p", c[19]);
+			// puts(str);
+			// sprintf(str, "CP4: %p", cp4);
+			// puts(str);
 
-	// // Test 5: Realloc test (with Next Fit)
-	// puts("Test 5: Check for Reallocation with Next Fit...");
-	// cp3 = (char *)sma_realloc(cp3, 16 * 1024 * 5);
-	// cp4 = (char *)sma_realloc(cp4, 16 * 1024 * 3);
+			puts("\t\t\t\t PASSED\n");
+		}
+		else
+		{
+			puts("\t\t\t\t FAILED\n");
+		}
+	}
+	else
+	{
+		puts("\t\t\t\t FAILED\n");
+	}
 
-	// if (cp3 == c[27] && cp3 != NULL && cp4 == c[8] && cp4 != NULL)
-	// {
-	// 	puts("\t\t\t\t PASSED\n");
-	// }
-	// else
-	// {
-	// 	puts("\t\t\t\t FAILED\n");
-	// }
+	// Test 5: Realloc test (with Next Fit)
+	puts("Test 5: Check for Reallocation with Next Fit...");
+	cp3 = (char *)sma_realloc(cp3, 16 * 1024 * 5);
+	cp4 = (char *)sma_realloc(cp4, 16 * 1024 * 3);
 
-	// //	Test 6: Print Stats
-	// puts("Test 6: Print SMA Statistics...");
-	// puts("===============================");
-	// sma_mallinfo();
+	if (cp3 == c[27] && cp3 != NULL && cp4 == c[8] && cp4 != NULL)
+	{
+		puts("\t\t\t\t PASSED\n");
+	}
+	else
+	{
+		puts("\t\t\t\t FAILED\n");
+	}
+
+	//	Test 6: Print Stats
+	puts("Test 6: Print SMA Statistics...");
+	puts("===============================");
+	sma_mallinfo();
 
 	return (0);
 }

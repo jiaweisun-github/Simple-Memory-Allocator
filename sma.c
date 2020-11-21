@@ -23,9 +23,10 @@
 #include "sma.h" // Please add any libraries you plan to use inside this file
 
 /* Definitions*/
+#define ROLL 32 // Max top free block size = 128 Kbytes
 #define MAX_TOP_FREE (128 * 1024) // Max top free block size = 128 Kbytes
 //	TODO: Change the Header size if required
-#define FREE_BLOCK_HEADER_SIZE 2 * sizeof(int) // Size of the Header in a free memory block
+#define FREE_BLOCK_HEADER_SIZE (2 * sizeof(int)) // Size of the Header in a free memory block
 //	TODO: Add constants here
 // #define BLOCK_SIZE (128) //size of block allocated everytime brk or sbrk is called
 
@@ -47,6 +48,13 @@ unsigned long totalAllocatedSize = 0; //	Total Allocated memory in Bytes
 unsigned long totalFreeSize = 0;	  //	Total Free memory in Bytes in the free memory list
 Policy currentPolicy = WORST;		  //	Current Policy
 //	TODO: Add any global variables here
+int tag = 0;
+int unallocated_length = 0;
+int allocated_length = 0;
+struct Node* saveBlock;
+int count = 0;
+
+
 
 /*
  * =====================================================================================
@@ -68,18 +76,15 @@ void *sma_malloc(int size)
 	// Checks if the free list is empty
 	if (freeListHead == NULL)
 	{
-		// printf("in 1st if\n");
 		// Allocate memory by increasing the Program Break
-		// printf("accessed\n");
 		pMemory = allocate_pBrk(size);
 	}
 	// If free list is not empty
 	else
 	{
-		// printf("in 1st else");
 		// Allocate memory from the free memory list
 		pMemory = allocate_freeList(size);
-
+		
 		// If a valid memory could NOT be allocated from the free memory list
 		if (pMemory == (void *)-2)
 		{
@@ -97,7 +102,6 @@ void *sma_malloc(int size)
 
 	// Updates SMA Info
 	totalAllocatedSize += size;
-	// printf("%d\n", (int) totalAllocatedSize);
 	return pMemory;
 }
 
@@ -109,6 +113,7 @@ void *sma_malloc(int size)
  */
 void sma_free(void *ptr)
 {
+
 	//	Checks if the ptr is NULL
 	if (ptr == NULL)
 	{
@@ -247,9 +252,13 @@ void *allocate_freeList(int size)
 	void *pMemory = NULL;
 
 	if (currentPolicy == WORST)
-	{
+	{		
 		// Allocates memory using Worst Fit Policy
 		pMemory = allocate_worst_fit(size);
+		count++;
+		if(count == ROLL){
+			pMemory = (void*)saveBlock;
+		}
 	}
 	else if (currentPolicy == NEXT)
 	{
@@ -287,6 +296,7 @@ void *allocate_worst_fit(int size)
 	//	Checks if appropriate block is found.
 	if (blockFound)
 	{
+		excessSize = *((int*)(worstBlock + 1)) + 2*FREE_BLOCK_HEADER_SIZE - size;
 		//	Allocates the Memory Block
 		allocate_block(worstBlock, size, excessSize, 1);
 	}
@@ -328,7 +338,6 @@ void *allocate_next_fit(int size)
 		//	Assigns invalid address if appropriate block not found in free list
 		nextBlock = (void *)-2;
 	}
-
 	return nextBlock;
 }
 
@@ -342,51 +351,82 @@ void allocate_block(void *newBlock, int size, int excessSize, int fromFreeList)
 {
 	void* excessFreeBlock; //	pointer for any excess free block
 	int addFreeBlock;
-
 	addFreeBlock = excessSize > 2*FREE_BLOCK_HEADER_SIZE;
-
 	//	If excess free size is big enough
 	if (addFreeBlock)
 	{
 		//my excessFreeBlock points at the start of the free block, so since newBlock points at the start of size, 
-		//newBlock + size would give me the pointer at the start of the free block
+		//newBlock - size would give me the pointer at the start of the free block
 		excessFreeBlock = newBlock - size;
 
 		//add tag and length on both end of the memory block
-		int tag = 0;
-		int length = excessSize - 2;
-
-		// printf("%p\n", ((int*) excessFreeBlock));
-		// printf("%d\n", tag);
-		// printf("%d\n", *((int*) excessFreeBlock));
-
-		//header
-		*((int*) excessFreeBlock) = tag;
-		*((int*) excessFreeBlock + 1) = length;
-
-		//tail
-		//get current program break 
-		void *programBreak = sbrk(0);
-		*((int*) programBreak - 1) = tag;
-		*((int*) programBreak - 2) = length;
+		unallocated_length = excessSize - 2*FREE_BLOCK_HEADER_SIZE;
+		allocated_length = size - 2*FREE_BLOCK_HEADER_SIZE;
 
 		//	Checks if the new block was allocated from the free memory list
 		if (fromFreeList)
 		{
+				/*----------set used memory header and tail------------*/
+
+			tag = 1;	// in use, cannot merge
+			//Used memory header
+			*((int*) newBlock) = tag;
+			*((int*) newBlock + 1) = allocated_length;
+
+			//Used memory tail
+			//get current program break 
+			*((int*) excessFreeBlock - 1) = tag;
+			*((int*) excessFreeBlock - 2) = allocated_length;
+
+				/*----------set free block header and tail------------*/
+
+			tag = 0;	// free, can merge
+			//Free Block Header
+			*((int*) excessFreeBlock) = tag;
+			*((int*) excessFreeBlock + 1) = unallocated_length;
+
+			//Free Block tail
+			//get current program break 
+			void *programBreak = sbrk(0);
+			*((int*) programBreak - 1) = tag;
+			*((int*) programBreak - 2) = unallocated_length;
 			//	Removes new block and adds the excess free block to the free list
 			replace_block_freeList(newBlock, excessFreeBlock);
 		}
 		else
 		{
-			// printf("in add loop");
+				/*----------set free block header and tail------------*/
+
+			tag = 0;	// free, can merge
+			//Free Block Header
+			*((int*) excessFreeBlock) = tag;
+			*((int*) excessFreeBlock + 1) = unallocated_length;
+
+			//Free Block tail
+			//get current program break 
+			void *programBreak = sbrk(0);
+			*((int*) programBreak - 1) = tag;
+			*((int*) programBreak - 2) = unallocated_length;
+
+				/*----------set used memory header and tail------------*/
+
+			tag = 1;	// in use, cannot merge
+			//Used memory header
+			*((int*) newBlock) = tag;
+			*((int*) newBlock + 1) = allocated_length;
+
+			//Used memory tail
+			//get current program break 
+			*((int*) excessFreeBlock - 1) = tag;
+			*((int*) excessFreeBlock - 2) = allocated_length;
 			//	Adds excess free block to the free list
 			add_block_freeList(excessFreeBlock);
 		}
 	}
+
 	//	Otherwise add the excess memory to the new block
 	else
 	{
-		//	TODO: Add excessSize to size and assign it to the new Block
 		size += excessSize;
 		//	Checks if the new block was allocated from the free memory list
 		if (fromFreeList)
@@ -405,7 +445,6 @@ void allocate_block(void *newBlock, int size, int excessSize, int fromFreeList)
  */
 void replace_block_freeList(void *oldBlock, void *newBlock)
 {
-	//	TODO: Replace the old block with the new block
 	struct Node* temp = freeListHead;
 	if(temp = (struct Node*) oldBlock)
 	{
@@ -436,24 +475,24 @@ void add_block_freeList(void *block)
 	struct Node* convertedBlock = block;
 	convertedBlock->next = NULL;
 	convertedBlock->prev = NULL;
-	if(!freeListHead){
+
+	if(freeListHead == NULL){
 		freeListHead = convertedBlock;
 		freeListTail = convertedBlock;
+		totalAllocatedSize -= get_blockSize(block);
+		totalFreeSize += get_blockSize(block);
+		saveBlock = freeListHead;
+		// convertedBlock = NULL;
 		return;
 	}
-	struct Node* temp = freeListHead;
+	// struct Node* temp = freeListHead;
 
-	while(temp->next != NULL)
-	{
-		temp = temp->next; // Go To last Node
-	}	
-	// temp->next = convertedBlock;
-	convertedBlock->prev = temp;
-	freeListTail = convertedBlock;
+	*((int*)freeListHead+2) += 1024;
 	
 	//	Updates SMA info
 	totalAllocatedSize -= get_blockSize(block);
 	totalFreeSize += get_blockSize(block);
+	convertedBlock = NULL;
 
 }
 
@@ -488,7 +527,6 @@ void remove_block_freeList(void* block)
 	totalAllocatedSize += get_blockSize(block);
 	totalFreeSize -= get_blockSize(block);
 }
-
 
 /*
  *	Funcation Name: get_blockSize
