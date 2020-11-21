@@ -55,9 +55,6 @@ int main(int argc, char *argv[])
 
 	// Allocate some storage .. this should go into the freed storage
 	ct = (char *)sma_malloc(5 * 1024);
-	printf("realloc\n");
-
-
 
 	// sprintf(str, "CT : %p", ct);
 	// puts(str);
